@@ -24,6 +24,7 @@ References:
 var fs = require('fs'),
     program = require('commander'),
     cheerio = require('cheerio'),
+    restler = require('restler'),
     HTMLFILE_DEFAULT = 'index.html',
     CHECKSFILE_DEFAULT = 'checks.json';
 
@@ -34,6 +35,17 @@ var assertFileExists = function(infile) {
     process.exit(1);
   }
   return instr;
+};
+
+var assertUrlExists = function(url) {
+  var targetUrl = url.toString();
+  restler.get(targetUrl).on('complete', function(data, response) {
+    if (response.statusCode == 404) {
+      console.log(targetUrl + ' does not exists. Error 404.');
+      process.exit(1);
+    }
+  });
+  return targetUrl;
 };
 
 var cheerioHtmlFile = function(htmlfile) {
@@ -63,10 +75,29 @@ if(require.main == module) {
   program
         .option('-c, --checks <check_file>', 'Path to checks.json', clone(assertFileExists), CHECKSFILE_DEFAULT)
         .option('-f, --file <html_file>', 'Path to index.html', clone(assertFileExists), HTMLFILE_DEFAULT)
+        .option('-u, --url <URL>', 'URL to check')
         .parse(process.argv);
-  var checkJson = checkHtmlFile(program.file, program.checks),
-      outJson = JSON.stringify(checkJson, null, 4);
-      console.log(outJson);
+  var file, checkJson;
+  if(program.file && program.file !== HTMLFILE_DEFAULT) {
+    checkJson = checkHtmlFile(program.file, program.checks);
+  }
+  if(program.url){
+    restler.get(program.url).on('complete', function(data, response) {
+      if(response.statusCode == 404) {
+        console.log("404 Error encountered.");
+        process.exit(1); // http://nodejs.org/api/process.html#process_process_exit_code
+      }
+      else {
+        fs.writeFileSync('remote.html', response.raw);
+        file = 'remote.html';
+        checkJson = checkHtmlFile(file, program.checks);
+      }
+    });
+  }
+  setTimeout(function(){
+    var outJson = JSON.stringify(checkJson, null, 4);
+    console.log(outJson);
+  }, 5000);
 } else {
   exports.checkHtmlFile = checkHtmlFile;
 }
