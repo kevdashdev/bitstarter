@@ -77,7 +77,7 @@ if(require.main == module) {
         .option('-f, --file <html_file>', 'Path to index.html', clone(assertFileExists), HTMLFILE_DEFAULT)
         .option('-u, --url <URL>', 'URL to check')
         .parse(process.argv);
-  var file, checkJson;
+  var checkJson;
   if(program.file && program.file !== HTMLFILE_DEFAULT) {
     checkJson = checkHtmlFile(program.file, program.checks);
   }
@@ -89,8 +89,7 @@ if(require.main == module) {
       }
       else {
         fs.writeFileSync('remote.html', response.raw);
-        file = 'remote.html';
-        checkJson = checkHtmlFile(file, program.checks);
+        checkJson = checkHtmlFile('remote.html', program.checks);
       }
     });
   }
